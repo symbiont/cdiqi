@@ -1,0 +1,217 @@
+/*
+ * Copyright 2011, Symbiont v.o.s
+ *	
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * 
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *     
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package cz.symbiont_it.cdiqi.impl;
+
+import static org.quartz.JobBuilder.newJob;
+import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
+import static org.quartz.TriggerBuilder.newTrigger;
+
+import java.util.UUID;
+
+import javax.annotation.PreDestroy;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+
+import org.quartz.JobDataMap;
+import org.quartz.JobDetail;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.Trigger;
+import org.quartz.impl.StdSchedulerFactory;
+import org.quartz.impl.matchers.EverythingMatcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import cz.symbiont_it.cdiqi.api.AsyncInvocationContext;
+import cz.symbiont_it.cdiqi.api.Asynchronous;
+import cz.symbiont_it.cdiqi.api.QuartzSchedulerManager;
+import cz.symbiont_it.cdiqi.spi.BoundRequestJobListener;
+
+/**
+ * Quartz scheduler manager implementation.
+ * 
+ * @author Martin Kouba
+ */
+@ApplicationScoped
+public class QuartzSchedulerManagerImpl implements QuartzSchedulerManager {
+
+	private static final Logger logger = LoggerFactory
+			.getLogger(QuartzSchedulerManagerImpl.class);
+
+	private static final String ASYNC_GROUP = "CdiqiAsync";
+
+	@Inject
+	private BoundRequestJobListener jobListener;
+
+	@Inject
+	private CdiJobFactory jobFactory;
+
+	private Scheduler scheduler;
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see cz.symbiont_it.wqi.QuartzSchedulerManager#init()
+	 */
+	@SuppressWarnings("unchecked")
+	public void init() throws SchedulerException {
+
+		if (isInitialized())
+			return;
+
+		StdSchedulerFactory factory = new StdSchedulerFactory();
+		factory.initialize(QUARTZ_PROPERTY_FILE_NAME);
+
+		scheduler = factory.getScheduler();
+
+		// Register job listener to bound request context to every job execution
+		scheduler.getListenerManager().addJobListener(jobListener,
+				EverythingMatcher.allJobs());
+		// Replace default job factory
+		scheduler.setJobFactory(jobFactory);
+
+		logger.info("Quartz scheduler manager initialized");
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * cz.symbiont_it.wqi.QuartzSchedulerManager#schedule(org.quartz.JobDetail,
+	 * org.quartz.Trigger)
+	 */
+	public void schedule(JobDetail jobDetail, Trigger trigger)
+			throws SchedulerException {
+		checkInitialized();
+		scheduler.scheduleJob(jobDetail, trigger);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * cz.symbiont_it.wqi.QuartzSchedulerManager#executeAsynchronously(java.
+	 * lang.Class)
+	 */
+	public void executeAsynchronously(
+			Class<? extends Asynchronous> asyncBeanClass)
+			throws SchedulerException {
+		executeAsynchronously(asyncBeanClass, null);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * cz.symbiont_it.wqi.QuartzSchedulerManager#executeAsynchronously(java.
+	 * lang.Class, cz.symbiont_it.wqi.AsynchronousInvocationContext)
+	 */
+	public void executeAsynchronously(
+			Class<? extends Asynchronous> asyncBeanClass,
+			AsyncInvocationContext context) throws SchedulerException {
+
+		if (!isInitialized() || !scheduler.isStarted()
+				|| scheduler.isInStandbyMode())
+			throw new IllegalStateException(
+					"Cannot execute asynchronously - scheduler not running");
+
+		JobDataMap dataMap = new JobDataMap();
+		dataMap.put(AsynchronousJob.KEY_ASYNC_CLASS, asyncBeanClass);
+		dataMap.put(AsynchronousJob.KEY_ASYNC_CONTEXT,
+				context != null ? context : new AsyncInvocationContext());
+		String id = UUID.randomUUID().toString();
+
+		JobDetail asyncJob = newJob(AsynchronousJob.class)
+				.withIdentity("WqiAsyncJob_" + id, ASYNC_GROUP)
+				.usingJobData(dataMap).build();
+		Trigger asyncTrigger = newTrigger()
+				.withIdentity("WqiAsyncTrigger_" + id, ASYNC_GROUP).startNow()
+				.withSchedule(simpleSchedule()).build();
+		schedule(asyncJob, asyncTrigger);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see cz.symbiont_it.wqi.QuartzSchedulerManager#start()
+	 */
+	public void start() throws SchedulerException {
+
+		if (!isInitialized())
+			init();
+
+		scheduler.start();
+		logger.info("Quartz scheduler started");
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see cz.symbiont_it.wqi.QuartzSchedulerManager#standby()
+	 */
+	public void standby() throws SchedulerException {
+		checkInitialized();
+		scheduler.standby();
+		logger.info("Quartz scheduler in stand-by mode");
+	}
+	
+	/*
+	 * (non-Javadoc)
+	 * @see cz.symbiont_it.wqi.api.QuartzSchedulerManager#clear()
+	 */
+	@Override
+	public void clear() throws SchedulerException {
+		checkInitialized();
+		scheduler.clear();
+		logger.info("Quartz scheduler is clear now");
+	}
+
+	@PreDestroy
+	public void destroy() {
+
+		if (!isInitialized())
+			return;
+
+		try {
+
+			scheduler.shutdown();
+			logger.info("Quartz scheduler manager destroyed");
+
+		} catch (SchedulerException e) {
+			logger.warn("Cannot shutdown quartz scheduler!");
+		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see cz.symbiont_it.wqi.QuartzSchedulerManager#isInitialized()
+	 */
+	public boolean isInitialized() {
+		return scheduler != null;
+	}
+
+	/**
+	 * 
+	 */
+	private void checkInitialized() {
+
+		if (!isInitialized())
+			throw new IllegalStateException(
+					"Quartz scheduler manager not initialized");
+	}
+
+}
