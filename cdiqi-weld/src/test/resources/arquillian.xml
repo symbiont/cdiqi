@@ -7,7 +7,10 @@
 	<container
 		qualifier="jboss7"
 		default="true">
-		
+		<!-- Uncomment to override JBOSS_HOME system property
+		<configuration>
+			<property name="jbossHome"></property>
+		</configuration-->
 		<protocol
 			type="Servlet 3.0">
 			<property

@@ -42,8 +42,8 @@
 		<weld.api.version>1.1.Final</weld.api.version>
 		<quartz.version>2.0.2</quartz.version>
 		<junit.version>4.8.1</junit.version>
-		<arquillian.version>1.0.0.CR4</arquillian.version>
-		<shrinkwrap.version>1.0.0-beta-5</shrinkwrap.version>
+		<arquillian.version>1.0.0.CR6</arquillian.version>
+		<shrinkwrap.resolver.version>1.0.0-beta-5</shrinkwrap.resolver.version>
 	</properties>
 
 	<dependencyManagement>
@@ -101,7 +101,7 @@
 				<groupId>org.jboss.shrinkwrap.resolver</groupId>
 				<artifactId>shrinkwrap-resolver-impl-maven</artifactId>
 				<scope>test</scope>
-				<version>${shrinkwrap.version}</version>
+				<version>${shrinkwrap.resolver.version}</version>
 			</dependency>
 
 		</dependencies>
