@@ -20,9 +20,8 @@ import org.quartz.JobExecutionException;
 import org.quartz.JobListener;
 
 /**
- * Bounds request context to single job execution. Associated storage is put in
- * volatile job execution context data map.
- *                                                                          
+ * Bounds request context to single job execution.
+ * 
  * @author Martin Kouba
  * @see JobListener
  * @see JobExecutionContext#put(Object, Object)

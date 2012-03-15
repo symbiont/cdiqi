@@ -1,5 +1,5 @@
 /*
- * Copyright 2011, Symbiont v.o.s
+ * Copyright 2012, Symbiont v.o.s
  *	
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,26 +70,5 @@ public interface QuartzSchedulerManager {
 	 */
 	public void schedule(JobDetail jobDetail, Trigger trigger)
 			throws SchedulerException;
-
-	/**
-	 * Execute business method asynchronously.
-	 * 
-	 * @param asyncBeanClass
-	 * @throws SchedulerException
-	 */
-	public void executeAsynchronously(
-			Class<? extends Asynchronous> asyncBeanClass)
-			throws SchedulerException;
-
-	/**
-	 * Execute business method asynchronously.
-	 * 
-	 * @param asyncBeanClass
-	 * @param context
-	 * @throws SchedulerException
-	 */
-	public void executeAsynchronously(
-			Class<? extends Asynchronous> asyncBeanClass,
-			AsyncInvocationContext context) throws SchedulerException;
 
 }

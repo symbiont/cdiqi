@@ -1,8 +1,11 @@
 package cz.symbiont_it.cdiqi.tests.async;
 
-import javax.inject.Inject;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
-import junit.framework.Assert;
+import javax.enterprise.event.Event;
+import javax.enterprise.util.AnnotationLiteral;
+import javax.inject.Inject;
 
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
@@ -11,7 +14,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.quartz.SchedulerException;
 
-import cz.symbiont_it.cdiqi.api.AsyncInvocationContext;
+import cz.symbiont_it.cdiqi.api.AsyncEvent;
 import cz.symbiont_it.cdiqi.api.QuartzSchedulerManager;
 import cz.symbiont_it.cdiqi.tests.CdiqiTestUtil;
 
@@ -29,6 +32,9 @@ public class AsyncTest {
 	@Inject
 	private AsyncResultStore resultStore;
 
+	@Inject
+	Event<AsyncEvent> event;
+
 	@Deployment
 	public static WebArchive createTestArchive() {
 		return CdiqiTestUtil.createTestArchive().addPackage(
@@ -40,36 +46,48 @@ public class AsyncTest {
 	 * @throws SchedulerException
 	 * @throws InterruptedException
 	 */
+	@SuppressWarnings("serial")
 	@Test
-	public void testAsyncExecution() throws SchedulerException,
+	public void testAsyncEvents() throws SchedulerException,
 			InterruptedException {
 
 		quartzManager.start();
 
-		quartzManager.executeAsynchronously(DependentAsyncService.class);
-		quartzManager.executeAsynchronously(RequestScopedAsyncService.class,
-				new AsyncInvocationContext().put("TEST",
-						"RequestScopedAsyncService"));
-		quartzManager
-				.executeAsynchronously(ApplicationScopedAsyncService.class);
+		event.fire(new AsyncEvent(new ComputationStart(),
+				new AnnotationLiteral<Normal>() {
+				}));
+		event.fire(new AsyncEvent(new ComputationStart(),
+				new AnnotationLiteral<Pseudo>() {
+				}));
 
 		String id = "" + Thread.currentThread().getId();
 		Thread.sleep(2000l);
 
-		Assert.assertEquals(1l, resultStore
-				.getResultsCount(DependentAsyncService.class.getName()));
-		Assert.assertEquals(2l, resultStore
-				.getResultsCount(RequestScopedAsyncService.class.getName()));
-		Assert.assertEquals(1l, resultStore
-				.getResultsCount(ApplicationScopedAsyncService.class.getName()));
+		// Check number of results
+		assertEquals(1l,
+				resultStore.getResultsCount(DependentComputationService.class
+						.getName()));
+		assertEquals(1l,
+				resultStore.getResultsCount(RequestScopedComputationService.class
+						.getName()));
+		assertEquals(1l,
+				resultStore.getResultsCount(ApplicationScopedComputationService.class
+						.getName()));
 
-		Assert.assertFalse(id.equals(resultStore.getResult(
-				DependentAsyncService.class.getName(), 0)));
-		Assert.assertFalse(id.equals(resultStore.getResult(
-				RequestScopedAsyncService.class.getName(), 0)));
-		Assert.assertEquals("RequestScopedAsyncService", resultStore.getResult(
-				RequestScopedAsyncService.class.getName(), 1));
-		Assert.assertFalse(id.equals(resultStore.getResult(
-				ApplicationScopedAsyncService.class.getName(), 0)));
+		// Check thread ids
+		assertFalse(id.equals(resultStore.getResult(
+				DependentComputationService.class.getName(), 0)));
+		assertFalse(id.equals(resultStore.getResult(
+				RequestScopedComputationService.class.getName(), 0)));
+		assertFalse(id.equals(resultStore.getResult(
+				ApplicationScopedComputationService.class.getName(), 0)));
+		assertFalse(resultStore.getResult(
+				DependentComputationService.class.getName(), 0).equals(
+				resultStore.getResult(
+						ApplicationScopedComputationService.class.getName(), 0)));
+		assertEquals(resultStore.getResult(
+				RequestScopedComputationService.class.getName(), 0),
+				resultStore.getResult(
+						ApplicationScopedComputationService.class.getName(), 0));
 	}
 }

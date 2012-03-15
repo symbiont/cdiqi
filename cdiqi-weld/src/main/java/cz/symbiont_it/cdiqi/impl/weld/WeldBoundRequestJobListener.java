@@ -30,7 +30,8 @@ import org.slf4j.LoggerFactory;
 import cz.symbiont_it.cdiqi.spi.BoundRequestJobListener;
 
 /**
- * Weld implementation. 
+ * Weld implementation. Associated storage is put in
+ * volatile job execution context data map.
  * 
  * @author Martin Kouba
  */

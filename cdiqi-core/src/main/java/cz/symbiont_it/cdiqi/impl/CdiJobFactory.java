@@ -30,8 +30,8 @@ import org.quartz.spi.TriggerFiredBundle;
  * 
  * It produces request scoped delegate. In fact it does not produce the real
  * instance but uninitialized proxy instead (see <a
- * href="https://issues.jboss.org/browse/CDI-125">CDI-125</a>). Unless Weld
- * works this way this factory will not work correctly.
+ * href="https://issues.jboss.org/browse/CDI-125">CDI-125</a>). Unless CDI
+ * implementations work this way this factory will not work correctly.
  * 
  * @author Martin Kouba
  * @see JobFactory
@@ -50,7 +50,6 @@ public class CdiJobFactory implements JobFactory {
 	 */
 	public Job newJob(TriggerFiredBundle bundle, Scheduler scheduler)
 			throws SchedulerException {
-
 		return jobExecutionDelegate;
 	}
 

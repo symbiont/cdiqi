@@ -8,7 +8,7 @@ import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.jboss.shrinkwrap.resolver.api.DependencyResolvers;
 import org.jboss.shrinkwrap.resolver.api.maven.MavenDependencyResolver;
 
-import cz.symbiont_it.cdiqi.api.Asynchronous;
+import cz.symbiont_it.cdiqi.api.QuartzSchedulerManager;
 import cz.symbiont_it.cdiqi.impl.QuartzSchedulerManagerImpl;
 import cz.symbiont_it.cdiqi.impl.weld.WeldBoundRequestJobListener;
 import cz.symbiont_it.cdiqi.spi.BoundRequestJobListener;
@@ -30,7 +30,7 @@ public final class CdiqiTestUtil {
 		WebArchive archive = ShrinkWrap.create(WebArchive.class, "test.war");
 
 		// API
-		archive.addPackage(Asynchronous.class.getPackage());
+		archive.addPackage(QuartzSchedulerManager.class.getPackage());
 		// SPI
 		archive.addPackage(BoundRequestJobListener.class.getPackage());
 		// Core impl
