@@ -41,7 +41,7 @@
 		<cdi.api.version>1.0-SP3</cdi.api.version>
 		<weld.api.version>1.1.Final</weld.api.version>
 		<quartz.version>2.0.2</quartz.version>
-		<junit.version>4.8.1</junit.version>
+		<junit.version>4.13.1</junit.version>
 		<arquillian.version>1.0.0.CR7</arquillian.version>
 		<jbossas.version>7.1.1.Final</jbossas.version>
 		<shrinkwrap.resolver.version>1.0.0-beta-5</shrinkwrap.resolver.version>
